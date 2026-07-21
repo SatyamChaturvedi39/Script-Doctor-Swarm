@@ -1,0 +1,35 @@
+﻿{
+  "_source": "SaveTheCat.com podcast and structural analyses: savethecat.com (Whiplash), studiobinder.com, sellingyourscreenplay.com. Screenplay available at: https://imsdb.com/scripts/Whiplash.html",
+  "_screenplay_pages": 108,
+  "_notes": "108-page Damien Chazelle draft. Beat positions from multiple cross-referenced STC analyses. Whiplash has an atypical STC structure because the protagonist and antagonist relationship inverts the classic hero/villain dynamic.",
+  "title": "Whiplash",
+  "writer": "Damien Chazelle",
+  "year": 2014,
+  "total_pages": 108,
+  "beats": {
+    "Opening Image": 1,
+    "Theme Stated": 5,
+    "Set-Up": 10,
+    "Catalyst": 11,
+    "Debate": 15,
+    "Break Into Two": 25,
+    "B Story": 28,
+    "Fun and Games": 40,
+    "Midpoint": 55,
+    "Bad Guys Close In": 65,
+    "All Is Lost": 76,
+    "Dark Night of the Soul": 83,
+    "Break Into Three": 88,
+    "Finale": 93,
+    "Final Image": 108
+  },
+  "beat_descriptions": {
+    "Opening Image": "Andrew alone, drumming in an empty practice room late at night.",
+    "Catalyst": "Fletcher enters, hears Andrew play, tests him — and leaves. Andrew is desperate to impress him.",
+    "Break Into Two": "Andrew is invited into Fletcher studio band. He crosses into the upside-down world of Fletcher's rehearsals.",
+    "Midpoint": "Andrew performs successfully at the JVC festival — false victory. Fletcher raises the stakes by promoting another drummer.",
+    "All Is Lost": "Andrew crashes his car racing to the Dunnellen competition, arrives bloodied, plays terribly, attacks Fletcher. Expelled.",
+    "Break Into Three": "Andrew quits music. His father accepts this. Then: a chance at the Carnegie Hall concert.",
+    "Final Image": "Andrew's explosive, transcendent drum solo. Fletcher and Andrew locked in a wordless understanding."
+  }
+}

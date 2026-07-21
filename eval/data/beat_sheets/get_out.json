@@ -1,0 +1,35 @@
+﻿{
+  "_source": "SaveTheCat.com, Get Out Beat Sheet by Don Roff, published 2017-09-29. URL: https://savethecat.com/beat-sheets/get-out-beat-sheet",
+  "_screenplay_pages": 99,
+  "_notes": "99-page Jordan Peele draft. Beat positions confirmed against STC breakdown and analyses at studiobinder.com, storyflow.so, bluecatscreenplay.com.",
+  "title": "Get Out",
+  "writer": "Jordan Peele",
+  "year": 2017,
+  "total_pages": 99,
+  "beats": {
+    "Opening Image": 1,
+    "Theme Stated": 5,
+    "Set-Up": 10,
+    "Catalyst": 12,
+    "Debate": 18,
+    "Break Into Two": 25,
+    "B Story": 30,
+    "Fun and Games": 45,
+    "Midpoint": 55,
+    "Bad Guys Close In": 65,
+    "All Is Lost": 75,
+    "Dark Night of the Soul": 82,
+    "Break Into Three": 87,
+    "Finale": 92,
+    "Final Image": 99
+  },
+  "beat_descriptions": {
+    "Opening Image": "Andre (future Logan King) stalked and abducted from a suburban street at night.",
+    "Catalyst": "Chris arrives at the Armitage estate — crosses into the strange world.",
+    "Break Into Two": "Missy Armitage hypnotizes Chris — psychological manipulation begins.",
+    "Midpoint": "Party scene. Logan King breaks character, screams at Chris. False victory collapses.",
+    "All Is Lost": "Chris strapped to the basement chair, ready for the transfer. Fully helpless.",
+    "Break Into Three": "Chris plugs ears with cotton stuffing, breaks Missy hold. Fights back.",
+    "Final Image": "Chris and Rod drive away from the burning Armitage house."
+  }
+}

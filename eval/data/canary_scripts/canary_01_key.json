@@ -1,0 +1,24 @@
+{
+  "character_inconsistencies": [
+    {
+      "character": "Arthur",
+      "established_page": 1,
+      "violated_page": 4,
+      "description": "Arthur is established as a strict pacifist but punches the bartender over warm beer."
+    }
+  ],
+  "continuity_errors": [
+    {
+      "error_type": "prop",
+      "page_introduced": 2,
+      "page_violated": 5,
+      "description": "Mark leaves his keys on the kitchen counter but pulls them from his pocket to start the car."
+    },
+    {
+      "error_type": "fact",
+      "page_introduced": 3,
+      "page_violated": 5,
+      "description": "Sarah states she is an only child but later mentions her older brother Bobby."
+    }
+  ]
+}

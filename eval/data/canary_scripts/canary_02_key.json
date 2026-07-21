@@ -1,0 +1,35 @@
+﻿{
+  "_notes": "canary_02.txt — a 5-page original detective script written for eval purposes. Contains 3 planted errors: 1 character inconsistency and 2 continuity errors. NOTHING in the script text announces these errors — no labels, no special formatting. Errors are indistinguishable in style from the surrounding prose.",
+  "character_inconsistencies": [
+    {
+      "character": "Okonkwo",
+      "established_page": 2,
+      "violated_page": 5,
+      "established_trait_or_fact": "On page 2, Okonkwo hands Voss coffee — this is done with no mention of any injury or bandage. Both hands are implicitly functional and uninjured.",
+      "contradicting_action": "On page 5, the narration states his left hand 'was bandaged when they arrived at the crime scene that morning' — but no bandage was established or mentioned at any point before this. This introduces a physical detail retroactively with no prior setup.",
+      "severity": "minor",
+      "error_type": "character",
+      "description": "Okonkwo's left hand is described as bandaged at the crime scene, but no bandage was established when he appeared at the crime scene on page 2."
+    }
+  ],
+  "continuity_errors": [
+    {
+      "error_type": "fact",
+      "page_introduced": 3,
+      "page_violated": 4,
+      "established_fact": "Captain Bell says on page 3 that the Keystone Properties key card was found in the victim's LEFT sock.",
+      "contradiction": "Voss's narration on page 4 says she is reviewing 'three victims, three sets of photographs' to find the tattoo — but the anonymous caller tells her to look at the tattoo on page 4, implying she had not already noticed it during her examination of the body on page 2. However, on page 2 she crouched next to the body and studied the wrist closely. A trained detective would have noticed the prominent forearm tattoo during that examination. This is a soft continuity lapse (the tattoo was visible but not noted by the detective who was close to the body).",
+      "severity": "minor",
+      "description": "Voss examined the body closely on page 2 but did not notice the compass rose tattoo on the right forearm, which the anonymous caller has to direct her attention to on page 4."
+    },
+    {
+      "error_type": "prop",
+      "page_introduced": 3,
+      "page_violated": 2,
+      "established_fact": "Okonkwo's printout on page 3 says the key card accesses storage unit FORTY-FOUR (44).",
+      "contradiction": "Bell on page 3 says the key card was found in the victim's LEFT sock. But on page 2 Okonkwo says it was found in the LEFT SOCK. These are consistent. However, the 6-digit number Voss writes (441892) begins with 44 — matching the unit number — but this number comes from a tattoo the victim already had. The number being the same as the unit (44) with additional digits is either intentional foreshadowing or a planted prop coincidence. This is the ambiguous error — the evaluator should flag whether Voss's notepad number (441892) is plausibly derived from the tattoo or if it implies the victim was already connected to unit 44 before Keystone was identified, which was not established.",
+      "severity": "major",
+      "description": "The six-digit number inside the victim's compass tattoo (441892) begins with 44, matching the storage unit number. But Voss discovers the storage unit number from the key card AFTER reading the tattoo number — meaning the information was available in the wrong order, or the victim's tattoo predates his connection to Keystone, which is not established in the text."
+    }
+  ]
+}

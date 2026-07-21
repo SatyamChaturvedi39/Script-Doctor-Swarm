@@ -1,0 +1,35 @@
+﻿{
+  "_source": "Multiple structural analyses: studiobinder.com, gointothestory.blcklst.com, scyn.app, and the published English-language screenplay (Bong Joon-ho and Han Jin-won, translated by Darcy Paquet, published by Grand Central Publishing 2020 ISBN 978-1538753644).",
+  "_screenplay_pages": 145,
+  "_notes": "145-page English translation. Parasite does not map cleanly onto a standard 110-page STC template — it is 145 pages and has an intentional genre-shift at the midpoint (comedy-of-cons to home-invasion thriller to tragedy). Beat positions are functional rather than strict page-count targets.",
+  "title": "Parasite",
+  "writer": "Bong Joon-ho, Han Jin-won",
+  "year": 2019,
+  "total_pages": 145,
+  "beats": {
+    "Opening Image": 1,
+    "Theme Stated": 8,
+    "Set-Up": 15,
+    "Catalyst": 15,
+    "Debate": 22,
+    "Break Into Two": 30,
+    "B Story": 35,
+    "Fun and Games": 55,
+    "Midpoint": 75,
+    "Bad Guys Close In": 95,
+    "All Is Lost": 105,
+    "Dark Night of the Soul": 115,
+    "Break Into Three": 120,
+    "Finale": 128,
+    "Final Image": 145
+  },
+  "beat_descriptions": {
+    "Opening Image": "The Kim family in their semi-basement apartment, struggling to find WiFi.",
+    "Catalyst": "Min-hyuk arrives with the scholar stone and the tutoring job offer for Ki-woo.",
+    "Break Into Two": "Ki-woo is hired. The family infiltration plan begins.",
+    "Midpoint": "Moon-gwang returns, reveals the secret underground bunker and Geun-sae. Genre shifts from con-comedy to survival thriller.",
+    "All Is Lost": "The rainstorm floods the Kim basement. The Parks return early. The situation spirals into violence.",
+    "Break Into Three": "The garden party. Geun-sae emerges. Ki-jung is stabbed. The plan collapses into tragedy.",
+    "Final Image": "Ki-woo reads his father Ki-taek letter from inside the Park house. The final image mirrors the opening — cramped, alone, dreaming."
+  }
+}
