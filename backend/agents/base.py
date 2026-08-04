@@ -51,6 +51,10 @@ async def invoke_llm_with_retry(
     Invoke the LLM with exponential backoff on rate-limit errors.
 
     Returns the raw string content of the response.
+
+    Note: newer Gemini models (3.x) return response.content as a list of
+    content-part dicts rather than a plain string (multimodal format).
+    We coerce to str here so all downstream code can treat it as text.
     """
     import asyncio
     import re
@@ -58,7 +62,18 @@ async def invoke_llm_with_retry(
     for attempt in range(max_retries + 1):
         try:
             response = await llm.ainvoke(messages)
-            return response.content
+            content = response.content
+            # Coerce list-of-parts (new multimodal format) to plain string
+            if isinstance(content, list):
+                parts = []
+                for part in content:
+                    if isinstance(part, str):
+                        parts.append(part)
+                    elif isinstance(part, dict):
+                        # text part: {"type": "text", "text": "..."}
+                        parts.append(part.get("text", ""))
+                content = "".join(parts)
+            return str(content)
         except Exception as e:
             error_str = str(e)
             if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
@@ -135,13 +150,26 @@ def chunk_script(text: str, max_chars: int = 80_000) -> list[str]:
     return chunks
 
 
-def parse_json_from_response(response: str) -> dict:
+def parse_json_from_response(response) -> dict:
     """
     Extract a JSON object from an LLM response.
 
     Handles responses that include markdown code fences, extra text
-    before/after the JSON, etc.
+    before/after the JSON, etc. Accepts str or list (defensive coercion).
     """
+    # Defensive coercion — should already be str from invoke_llm_with_retry
+    if not isinstance(response, str):
+        if isinstance(response, list):
+            parts = []
+            for part in response:
+                if isinstance(part, str):
+                    parts.append(part)
+                elif isinstance(part, dict):
+                    parts.append(part.get("text", ""))
+            response = "".join(parts)
+        else:
+            response = str(response)
+
     # Try to find JSON in code fences first
     fence_match = re.search(r"```(?:json)?\s*\n?(.*?)\n?```", response, re.DOTALL)
     if fence_match:

@@ -8,24 +8,39 @@ deviation between detected beat positions and ground truth positions.
 from __future__ import annotations
 
 import os
+import sys
 import json
 import logging
 import asyncio
 
+# Ensure backend directory is in sys.path when running standalone or imported
+backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend"))
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
 from agents.structure_agent import run_structure_agent
 from parser.extractor import estimate_page_count
 
+from eval_cache import get_cached_result, set_cached_result
+
 logger = logging.getLogger("script_doctor.eval.structure")
 
-async def evaluate_structure():
+async def evaluate_structure(force: bool = False, delay_seconds: float = 3.0, films: list[str] | None = None) -> list[dict]:
     base_dir = os.path.dirname(os.path.abspath(__file__))
     keys_dir = os.path.join(base_dir, "data", "beat_sheets")
     scripts_dir = os.path.join(base_dir, "data", "canary_scripts")
     
-    reference_films = ["get_out", "whiplash", "parasite"]
+    reference_films = films or ["get_out", "whiplash", "parasite"]
     results = []
     
     for film in reference_films:
+        cache_key = f"structure:{film}"
+        cached = get_cached_result(cache_key, force=force)
+        if cached:
+            logger.info("[CACHE HIT] Skipping structure evaluation for '%s' (loaded from eval_cache.json)", film)
+            results.append(cached)
+            continue
+
         # Load key
         key_path = os.path.join(keys_dir, f"{film}.json")
         script_path = os.path.join(scripts_dir, f"{film}.txt")
@@ -88,12 +103,18 @@ async def evaluate_structure():
             
             mean_dev = sum(film_deviations) / len(film_deviations) if film_deviations else 100.0
             
-            results.append({
+            res_dict = {
                 "title": key_data["title"],
                 "page_count": page_count,
                 "mean_deviation_pct": round(mean_dev, 2),
                 "beats": comparisons
-            })
+            }
+            set_cached_result(cache_key, res_dict)
+            results.append(res_dict)
+            
+            if delay_seconds > 0:
+                logger.info("Pacing delay: sleeping for %.1fs before next call...", delay_seconds)
+                await asyncio.sleep(delay_seconds)
             
         except Exception as e:
             logger.exception("Failed to run structure eval for %s", film)

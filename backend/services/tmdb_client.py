@@ -30,14 +30,22 @@ _TMDB_RETRY_BASE_DELAY = 2.0  # seconds; doubles each attempt → 2, 4, 8, 16
 
 
 async def _get_client() -> httpx.AsyncClient:
-    """Create an httpx client with TMDB auth headers."""
+    """Create an httpx client with TMDB auth.
+
+    TMDB supports two auth methods:
+      - v3 API key: passed as ?api_key=... query parameter
+      - v4 Bearer token: passed as Authorization: Bearer ... header
+
+    The key in config is treated as a v3 API key (query param).
+    This avoids the 401 that results from sending a v3 key as a Bearer token.
+    """
     settings = get_settings()
     return httpx.AsyncClient(
         base_url=settings.TMDB_BASE_URL,
-        headers={"Authorization": f"Bearer {settings.TMDB_API_KEY}"},
         params={"api_key": settings.TMDB_API_KEY},
         timeout=15.0,
     )
+
 
 
 async def _tmdb_get_with_retry(client: httpx.AsyncClient, path: str, params: dict | None = None) -> httpx.Response:
@@ -46,6 +54,7 @@ async def _tmdb_get_with_retry(client: httpx.AsyncClient, path: str, params: dic
 
     Raises the last httpx.HTTPStatusError if all retries are exhausted.
     """
+    resp = None
     for attempt in range(_TMDB_MAX_RETRIES + 1):
         resp = await client.get(path, params=params)
         if resp.status_code == 429 or resp.status_code >= 500:
@@ -61,6 +70,7 @@ async def _tmdb_get_with_retry(client: httpx.AsyncClient, path: str, params: dic
                 continue
         resp.raise_for_status()
         return resp
+    assert resp is not None
     resp.raise_for_status()  # final raise
     return resp  # unreachable, satisfies type checker
 

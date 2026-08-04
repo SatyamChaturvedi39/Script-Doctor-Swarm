@@ -1,5 +1,7 @@
 # Environment
 .env
+backend/.env
+frontend/.env
 
 # Python
 __pycache__/
@@ -9,12 +11,17 @@ dist/
 build/
 venv/
 .venv/
+backend/venv/
+backend/.venv/
 
 # Node / Frontend
 node_modules/
 frontend/dist/
 frontend/.vite/
 *.local
+
+# Data — large PDFs excluded from version control
+backend/data/test_scripts/*.pdf
 
 # IDE
 .vscode/
@@ -26,5 +33,7 @@ frontend/.vite/
 .DS_Store
 Thumbs.db
 
-# Eval outputs
+# Eval outputs (intermediate; committed versions are timestamped)
 eval/results/
+
+script_doctor_swarm_implementation_plan.md

@@ -8,16 +8,24 @@ Computes overlap percentage.
 from __future__ import annotations
 
 import os
+import sys
 import json
 import logging
 import asyncio
 
+# Ensure backend directory is in sys.path when running standalone or imported
+backend_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend"))
+if backend_path not in sys.path:
+    sys.path.insert(0, backend_path)
+
 from agents.comps_agent import run_comps_agent
 from parser.extractor import estimate_page_count
 
+from eval_cache import get_cached_result, set_cached_result
+
 logger = logging.getLogger("script_doctor.eval.comps")
 
-async def evaluate_comps():
+async def evaluate_comps(force: bool = False, delay_seconds: float = 3.0, films: list[str] | None = None) -> list[dict]:
     base_dir = os.path.dirname(os.path.abspath(__file__))
     ref_dir = os.path.join(base_dir, "data", "comps_reference")
     scripts_dir = os.path.join(base_dir, "data", "canary_scripts")
@@ -31,10 +39,17 @@ async def evaluate_comps():
     with open(ref_path, "r", encoding="utf-8-sig") as f:
         comps_reference = json.load(f)
         
-    reference_films = ["get_out", "whiplash", "parasite"]
+    reference_films = films or ["get_out", "whiplash", "parasite"]
     results = []
     
     for film_key in reference_films:
+        cache_key = f"comps:{film_key}"
+        cached = get_cached_result(cache_key, force=force)
+        if cached:
+            logger.info("[CACHE HIT] Skipping comps evaluation for '%s' (loaded from eval_cache.json)", film_key)
+            results.append(cached)
+            continue
+
         script_path = os.path.join(scripts_dir, f"{film_key}.txt")
         if not os.path.exists(script_path):
             logger.error("Missing script for %s", film_key)
@@ -67,14 +82,20 @@ async def evaluate_comps():
             
             overlap_pct = (len(overlaps) / len(ground_truth_comps)) * 100 if ground_truth_comps else 0.0
             
-            results.append({
+            res_dict = {
                 "title": film_title,
                 "ground_truth_comps": ground_truth_comps,
                 "detected_comps": detected_comps,
                 "overlaps": overlaps,
                 "overlap_count": len(overlaps),
                 "overlap_pct": round(overlap_pct, 1)
-            })
+            }
+            set_cached_result(cache_key, res_dict)
+            results.append(res_dict)
+            
+            if delay_seconds > 0:
+                logger.info("Pacing delay: sleeping for %.1fs before next call...", delay_seconds)
+                await asyncio.sleep(delay_seconds)
             
         except Exception as e:
             logger.exception("Failed to run comps eval for %s", film_title)

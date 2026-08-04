@@ -13,6 +13,8 @@ from api.jobs import mark_complete, mark_error, mark_running
 from api.schemas import CoverageReport
 from graph.pipeline import compiled_graph
 
+from graph.state import PipelineState
+
 logger = logging.getLogger("script_doctor.graph.runner")
 
 
@@ -25,7 +27,7 @@ async def run_pipeline(job_id: str, script_text: str, page_count: int) -> None:
     logger.info("Starting pipeline execution for job: %s", job_id)
     mark_running(job_id)
 
-    initial_state = {
+    initial_state: PipelineState = {
         "script_text": script_text,
         "page_count": page_count,
         "job_id": job_id,

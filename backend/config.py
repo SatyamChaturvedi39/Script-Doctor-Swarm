@@ -7,6 +7,17 @@ from pydantic_settings import BaseSettings
 from functools import lru_cache
 
 
+import os
+from dotenv import load_dotenv
+
+# Load .env from project root or current working directory
+root_env = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".env"))
+if os.path.exists(root_env):
+    load_dotenv(root_env)
+else:
+    load_dotenv()
+
+
 class Settings(BaseSettings):
     """Application settings loaded from environment variables."""
 
@@ -15,7 +26,7 @@ class Settings(BaseSettings):
     TMDB_API_KEY: str = ""
 
     # --- Model Configuration ---
-    GEMINI_MODEL: str = "gemini-2.0-flash"
+    GEMINI_MODEL: str = "gemini-3.5-flash"
 
     # --- TMDB ---
     TMDB_BASE_URL: str = "https://api.themoviedb.org/3"

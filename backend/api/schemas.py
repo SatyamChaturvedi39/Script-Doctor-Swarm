@@ -168,10 +168,10 @@ class CoverageReport(BaseModel):
     verdict_justification: str = ""
 
     # Agent detail (for tabbed view)
-    structure_detail: Optional[StructureResult] = None
-    character_detail: Optional[CharacterResult] = None
-    comps_detail: Optional[CompsResult] = None
-    continuity_detail: Optional[ContinuityResult] = None
+    structure_detail: Optional[StructureResult | dict] = None
+    character_detail: Optional[CharacterResult | dict] = None
+    comps_detail: Optional[CompsResult | dict] = None
+    continuity_detail: Optional[ContinuityResult | dict] = None
 
 
 # ═══════════════════════════════════════════════════════════════════════════
