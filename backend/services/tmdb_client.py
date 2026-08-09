@@ -178,6 +178,43 @@ async def get_movie_details(movie_id: int) -> dict:
         return resp.json()
 
 
+
+# Alias map: normalises non-standard genre strings LLMs commonly produce
+# to the exact strings TMDB's genre map uses.
+_GENRE_ALIASES: dict[str, str] = {
+    "sci-fi": "science fiction",
+    "scifi": "science fiction",
+    "sf": "science fiction",
+    "sci fi": "science fiction",
+    "superhero": "action",
+    "spy": "action",
+    "rom-com": "romance",
+    "romcom": "romance",
+    "romantic comedy": "romance",
+    "dark comedy": "comedy",
+    "black comedy": "comedy",
+    "docu": "documentary",
+    "bio": "history",
+    "biopic": "history",
+    "slasher": "horror",
+    "thriller drama": "thriller",
+    "action-comedy": "comedy",
+    "action comedy": "comedy",
+}
+
+
+async def _search_movies_by_text(query: str, max_results: int = 10) -> list[dict]:
+    """Fallback: text-search TMDB for movies matching a genre or keyword string."""
+    async with await _get_client() as client:
+        resp = await _tmdb_get_with_retry(
+            client, "/search/movie",
+            params={"query": query, "language": "en-US", "page": 1, "include_adult": "false"}
+        )
+    results = resp.json().get("results", [])
+    logger.info("TMDB text search '%s': %d results", query, len(results))
+    return results[:max_results]
+
+
 async def find_comparable_films(
     genres: list[str],
     keywords: list[str],
@@ -188,28 +225,51 @@ async def find_comparable_films(
     High-level function: resolve genres + keywords to IDs,
     then discover matching films.
 
+    Three-tier fallback strategy:
+      Tier 1: discover/movie with genre IDs + keyword IDs
+      Tier 2: discover/movie with genre IDs only (drops keywords)
+      Tier 3: search/movie text search on normalised genre name
+              (handles LLM returning "sci-fi" instead of "Science Fiction")
+
     Returns a curated list of comparable films from TMDB.
     """
-    genre_ids = await resolve_genre_ids(genres)
+    # Normalise genre strings using alias map before resolving
+    normalised_genres = [_GENRE_ALIASES.get(g.lower(), g) for g in genres]
+
+    genre_ids = await resolve_genre_ids(normalised_genres)
     keyword_ids = await resolve_keyword_ids(keywords)
 
-    # Try with both genres and keywords first
+    logger.info(
+        "TMDB find_comparable_films: raw_genres=%s normalised=%s genre_ids=%s",
+        genres, normalised_genres, genre_ids,
+    )
+
+    # ── Tier 1: genres + keywords ──
     movies = await discover_movies(
         genre_ids=genre_ids,
         keyword_ids=keyword_ids,
         min_year=min_year,
-        max_results=max_results * 2,  # fetch extra, then trim
+        max_results=max_results * 2,
     )
 
-    # If too few results, fall back to genres only
+    # ── Tier 2: genres only ──
     if len(movies) < 3 and genre_ids:
-        logger.info("Few results with keywords, falling back to genre-only search")
+        logger.info("Tier 2 fallback: genre-only discover (no keywords)")
         movies = await discover_movies(
             genre_ids=genre_ids,
             keyword_ids=None,
             min_year=min_year,
             max_results=max_results * 2,
         )
+
+    # ── Tier 3: text search on genre name when ID resolution failed ──
+    if len(movies) < 3 and not genre_ids and normalised_genres:
+        search_query = " ".join(normalised_genres[:2])
+        logger.info(
+            "Tier 3 fallback: genre IDs resolved to empty, using text search on '%s'",
+            search_query,
+        )
+        movies = await _search_movies_by_text(search_query, max_results=max_results * 2)
 
     # Resolve genre names for the results
     genre_map = await get_genre_map()
@@ -235,3 +295,4 @@ async def find_comparable_films(
         })
 
     return formatted
+

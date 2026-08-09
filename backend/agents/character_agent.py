@@ -25,7 +25,9 @@ logger = logging.getLogger("script_doctor.agents.character")
 
 SYSTEM_PROMPT = """You are an expert screenplay character analyst. Your task is to:
 
-1. IDENTIFY all significant named characters in the screenplay (up to 10 most important).
+1. IDENTIFY all significant named characters in the screenplay (up to 10 most important). 
+   - Note: The screenplay text may use non-standard formatting (e.g. ALL-CAPS dialogue headers "JOHNNY", transcript style "Johnny:", or inline stage directions). Look for recurring character names speaking or taking action throughout the text regardless of format.
+
 2. For each character, determine:
    - Their role (protagonist / antagonist / supporting)
    - Their stated motivation (what they explicitly want)
@@ -70,7 +72,7 @@ async def run_character_agent(script_text: str, page_count: int) -> CharacterRes
     """
     Analyze characters: extract profiles and flag inconsistencies.
     """
-    logger.info("Character Agent: analyzing %d-page script", page_count)
+    logger.info("Character Agent: analyzing %d-page script (length: %d chars)", page_count, len(script_text))
 
     llm = get_llm(temperature=0.2)
 
@@ -85,13 +87,18 @@ async def run_character_agent(script_text: str, page_count: int) -> CharacterRes
     # Parse characters
     characters: list[CharacterProfile] = []
     for c in raw.get("characters", []):
-        characters.append(CharacterProfile(
-            name=c.get("name", "Unknown"),
-            role=c.get("role", "supporting"),
-            stated_motivation=c.get("stated_motivation", ""),
-            arc_summary=c.get("arc_summary", ""),
-            traits=c.get("traits", []),
-        ))
+        char_name = c.get("name", "Unknown").strip()
+        if char_name:
+            logger.info("Character Agent: identified character: %s (role: %s)", char_name, c.get("role"))
+            characters.append(CharacterProfile(
+                name=char_name,
+                role=c.get("role", "supporting"),
+                stated_motivation=c.get("stated_motivation", ""),
+                arc_summary=c.get("arc_summary", ""),
+                traits=c.get("traits", []),
+            ))
+
+    logger.info("Character Agent: extracted %d character profiles: %s", len(characters), [c.name for c in characters])
 
     # Parse inconsistencies
     inconsistencies: list[CharacterInconsistency] = []
@@ -111,13 +118,20 @@ async def run_character_agent(script_text: str, page_count: int) -> CharacterRes
             severity=severity,
         ))
 
-    # Generate assessment
+    # Generate assessment & Guard for empty/insufficient character extraction
     major_count = sum(1 for i in inconsistencies if i.severity == Severity.MAJOR)
     minor_count = sum(1 for i in inconsistencies if i.severity == Severity.MINOR)
 
-    if not inconsistencies:
+    if len(characters) == 0:
+        logger.warning("Character Agent: 0 characters extracted from script formatting.")
         assessment = (
-            f"Character work is consistent across {len(characters)} tracked characters. "
+            "Insufficient character data extracted from script text formatting. "
+            "No character profiles could be tracked for inconsistency analysis."
+        )
+    elif not inconsistencies:
+        assessment = (
+            f"Character work is consistent across {len(characters)} tracked characters "
+            f"({', '.join(c.name for c in characters[:4])}). "
             f"No significant trait violations detected."
         )
     else:

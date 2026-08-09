@@ -48,16 +48,25 @@ async def invoke_llm_with_retry(
     max_retries: int = MAX_RETRIES,
 ) -> str:
     """
-    Invoke the LLM with exponential backoff on rate-limit errors.
+    Invoke the LLM with exponential backoff and automatic API key rotation on rate limits.
 
     Returns the raw string content of the response.
 
-    Note: newer Gemini models (3.x) return response.content as a list of
-    content-part dicts rather than a plain string (multimodal format).
-    We coerce to str here so all downstream code can treat it as text.
+    Key Failover: If a key pool (comma-separated GEMINI_API_KEY or GEMINI_API_KEY_FALLBACK)
+    is configured in settings, rate-limited requests automatically switch to the next key
+    in the pool before waiting.
     """
     import asyncio
     import re
+    from config import get_settings
+
+    settings = get_settings()
+    key_pool = settings.get_api_key_pool()
+    model_cascade = settings.get_model_cascade()
+    
+    current_key_idx = 0
+    current_model = getattr(llm, "model", settings.GEMINI_MODEL)
+    current_model_idx = model_cascade.index(current_model) if current_model in model_cascade else 0
 
     for attempt in range(max_retries + 1):
         try:
@@ -70,18 +79,50 @@ async def invoke_llm_with_retry(
                     if isinstance(part, str):
                         parts.append(part)
                     elif isinstance(part, dict):
-                        # text part: {"type": "text", "text": "..."}
                         parts.append(part.get("text", ""))
                 content = "".join(parts)
             return str(content)
         except Exception as e:
             error_str = str(e)
             if "429" in error_str or "RESOURCE_EXHAUSTED" in error_str:
+                # Failover Step 1: Try next API Key in key pool for current model
+                if len(key_pool) > 1 and current_key_idx < len(key_pool) - 1:
+                    current_key_idx += 1
+                    next_key = key_pool[current_key_idx]
+                    logger.warning(
+                        "API Key quota exhausted (429). Failing over to key #%d (%s...) for model '%s'",
+                        current_key_idx + 1, next_key[:8], current_model
+                    )
+                    llm = ChatGoogleGenerativeAI(
+                        model=current_model,
+                        google_api_key=next_key,
+                        temperature=getattr(llm, "temperature", 0.2),
+                        max_retries=1,
+                    )
+                    continue
+
+                # Failover Step 2: Try next model in model cascade (e.g. 3.6-flash -> 3.5-flash -> 3.5-flash-lite)
+                if current_model_idx < len(model_cascade) - 1:
+                    current_model_idx += 1
+                    current_key_idx = 0  # Reset to first key for new model
+                    current_model = model_cascade[current_model_idx]
+                    current_key = key_pool[current_key_idx] if key_pool else settings.GEMINI_API_KEY
+                    logger.warning(
+                        "Model quota exhausted (429). Advancing cascade to model #%d '%s'...",
+                        current_model_idx + 1, current_model
+                    )
+                    llm = ChatGoogleGenerativeAI(
+                        model=current_model,
+                        google_api_key=current_key,
+                        temperature=getattr(llm, "temperature", 0.2),
+                        max_retries=1,
+                    )
+                    continue
+
                 if attempt < max_retries:
-                    # Try to parse the Retry-After value from the error message
                     retry_after_match = re.search(r"retry in (\d+(?:\.\d+)?)s", error_str, re.IGNORECASE)
                     if retry_after_match:
-                        delay = float(retry_after_match.group(1)) + 2.0  # small buffer
+                        delay = float(retry_after_match.group(1)) + 2.0
                     else:
                         delay = RETRY_BASE_DELAY * (2 ** attempt)
                     logger.warning(

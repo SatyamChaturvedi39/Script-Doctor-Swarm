@@ -22,6 +22,8 @@ from api.jobs import push_event
 
 logger = logging.getLogger("script_doctor.graph.pipeline")
 
+import asyncio
+
 # ── Node Functions ─────────────────────────────────────────────────────────
 
 async def structure_node(state: PipelineState) -> Dict[str, Any]:
@@ -46,7 +48,8 @@ async def structure_node(state: PipelineState) -> Dict[str, Any]:
         return {"agent_outputs": [{"agent_name": "structure", "result": {"error": str(e)}}]}
 
 async def character_node(state: PipelineState) -> Dict[str, Any]:
-    """Execute Character Agent."""
+    """Execute Character Agent (staggered by 1.5s to respect TPM token rates)."""
+    await asyncio.sleep(1.5)
     job_id = state["job_id"]
     logger.info("Executing Character Agent node for job: %s", job_id)
     await push_event(job_id, {"event": "agent_start", "agent": "character", "message": "Character Agent tracking motivations and arcs..."})
@@ -67,13 +70,16 @@ async def character_node(state: PipelineState) -> Dict[str, Any]:
         return {"agent_outputs": [{"agent_name": "character", "result": {"error": str(e)}}]}
 
 async def comps_node(state: PipelineState) -> Dict[str, Any]:
-    """Execute Comps/Marketability Agent."""
+    """Execute Comps/Marketability Agent (staggered by 3.0s & text windowed)."""
+    await asyncio.sleep(3.0)
     job_id = state["job_id"]
     logger.info("Executing Comps Agent node for job: %s", job_id)
     await push_event(job_id, {"event": "agent_start", "agent": "comps", "message": "Comps Agent querying TMDB and positioning..."})
     
     try:
-        res = await run_comps_agent(state["script_text"], state["page_count"])
+        # Genre & tone extraction only requires the first 40,000 characters (approx. 20-25 pages)
+        sample_text = state["script_text"][:40000] if len(state["script_text"]) > 40000 else state["script_text"]
+        res = await run_comps_agent(sample_text, state["page_count"])
         result_dict = res.model_dump()
         await push_event(job_id, {
             "event": "agent_complete", 
@@ -88,7 +94,8 @@ async def comps_node(state: PipelineState) -> Dict[str, Any]:
         return {"agent_outputs": [{"agent_name": "comps", "result": {"error": str(e)}}]}
 
 async def continuity_node(state: PipelineState) -> Dict[str, Any]:
-    """Execute Continuity Agent."""
+    """Execute Continuity Agent (staggered by 4.5s)."""
+    await asyncio.sleep(4.5)
     job_id = state["job_id"]
     logger.info("Executing Continuity Agent node for job: %s", job_id)
     await push_event(job_id, {"event": "agent_start", "agent": "continuity", "message": "Continuity Agent checking for contradictions..."})

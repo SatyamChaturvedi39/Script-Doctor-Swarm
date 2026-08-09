@@ -20,6 +20,7 @@ Expected beats (from the 15-beat Save the Cat sheet, selecting the
 from __future__ import annotations
 
 import logging
+from typing import TypedDict
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
@@ -28,8 +29,14 @@ from api.schemas import BeatDetection, Confidence, StructureResult
 
 logger = logging.getLogger("script_doctor.agents.structure")
 
+
+class ExpectedBeat(TypedDict):
+    beat_name: str
+    expected_pct: float
+
+
 # ── Expected beat positions ──────────────────────────────────────────────
-EXPECTED_BEATS = [
+EXPECTED_BEATS: list[ExpectedBeat] = [
     {"beat_name": "Catalyst",         "expected_pct": 11.0},
     {"beat_name": "Break Into Two",   "expected_pct": 23.0},
     {"beat_name": "B Story",          "expected_pct": 27.0},
