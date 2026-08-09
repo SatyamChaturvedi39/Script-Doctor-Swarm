@@ -2,9 +2,9 @@
  * API Client for interacting with the Script Doctor Swarm backend.
  */
 
-// Base URL is proxy-handled in Vite dev server (e.g. requests to /api/ are proxied to localhost:8000).
-// For standalone or deployed, configure via an environment variable if needed.
-const API_BASE = "";
+// Reads VITE_API_BASE_URL from environment (e.g. https://script-doctor-backend.onrender.com).
+// In development, falls back to "" so Vite dev proxy handles /api/ locally.
+const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
 
 /**
  * Upload a screenplay file to start the coverage pipeline.

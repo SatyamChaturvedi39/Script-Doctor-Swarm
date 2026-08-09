@@ -31,7 +31,8 @@ export function useSSE(jobId) {
     setError(null);
     setEvents([]);
 
-    const url = `/api/coverage/${jobId}/stream`;
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
+    const url = `${API_BASE}/api/coverage/${jobId}/stream`;
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
 
