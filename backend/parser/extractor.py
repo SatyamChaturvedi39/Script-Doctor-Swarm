@@ -58,15 +58,16 @@ def _extract_pdf(raw_bytes: bytes) -> str:
     # Try pypdf first if installed (much faster)
     try:
         import pypdf
-        reader = pypdf.PdfReader(buf)
+        reader = pypdf.PdfReader(buf, strict=False)
         for i, page in enumerate(reader.pages, start=1):
             text = page.extract_text() or ""
             pages_text.append(f"\n--- PAGE {i} ---\n{text}")
         result = "\n".join(pages_text)
-        logger.info("Extracted %d pages from PDF using pypdf", len(pages_text))
-        return result
-    except ImportError:
-        pass
+        if result.strip():
+            logger.info("Extracted %d pages from PDF using pypdf", len(pages_text))
+            return result
+    except Exception as e:
+        logger.warning("pypdf extraction failed or yielded empty text: %s, trying pdfplumber", e)
 
     # Fallback to pdfplumber without layout=True (layout=True is 100x slower on 5MB+ PDFs and causes timeouts)
     try:
@@ -79,8 +80,9 @@ def _extract_pdf(raw_bytes: bytes) -> str:
         result = "\n".join(pages_text)
         logger.info("Extracted %d pages from PDF using pdfplumber", len(pages_text))
         return result
-    except ImportError:
-        raise RuntimeError("pdfplumber is required for PDF support.")
+    except Exception as e:
+        logger.error("pdfplumber extraction failed: %s", e)
+        raise RuntimeError(f"Could not extract text from PDF: {e}")
 
 
 def estimate_page_count(script_text: str) -> int:
