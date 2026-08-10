@@ -24,6 +24,28 @@ logger = logging.getLogger("script_doctor.graph.pipeline")
 
 import asyncio
 
+
+def _sample_script_for_structure(text: str, total_chars: int = 120000) -> str:
+    """Sample chunks distributed across the full script so beat detection
+    covers the entire page range, not just the opening act.
+    
+    Strategy: 7 equally-spaced windows of ~17k chars each, covering
+    0%, 14%, 28%, 42%, 57%, 71%, 85% positions in the script.
+    Total budget: ~120k chars, safe for 512MB free-tier RAM.
+    """
+    n = len(text)
+    if n <= total_chars:
+        return text
+    
+    num_chunks = 7
+    chunk_size = total_chars // num_chunks
+    chunks = []
+    for i in range(num_chunks):
+        start = int((i / num_chunks) * n)
+        end = min(start + chunk_size, n)
+        chunks.append(text[start:end])
+    return "\n\n[...SCRIPT CONTINUES...]\n\n".join(chunks)
+
 # ── Node Functions ─────────────────────────────────────────────────────────
 
 async def structure_node(state: PipelineState) -> Dict[str, Any]:
@@ -33,8 +55,9 @@ async def structure_node(state: PipelineState) -> Dict[str, Any]:
     await push_event(job_id, {"event": "agent_start", "agent": "structure", "message": "Structure Agent analyzing screenplay beats..."})
     
     try:
-        # Cap at 80,000 chars (~40 pages) to prevent OOM on free-tier hosting
-        text = state["script_text"][:80000] if len(state["script_text"]) > 80000 else state["script_text"]
+        # Smart-sample across full script length so all 7 beats are detectable
+        # regardless of total script size. Budget: 120k chars spread over 7 windows.
+        text = _sample_script_for_structure(state["script_text"])
         res = await run_structure_agent(text, state["page_count"])
         result_dict = res.model_dump()
         await push_event(job_id, {
@@ -57,8 +80,8 @@ async def character_node(state: PipelineState) -> Dict[str, Any]:
     await push_event(job_id, {"event": "agent_start", "agent": "character", "message": "Character Agent tracking motivations and arcs..."})
     
     try:
-        # Cap at 80,000 chars to prevent OOM on free-tier hosting
-        text = state["script_text"][:80000] if len(state["script_text"]) > 80000 else state["script_text"]
+        # First 60k chars covers all major characters (they're established in Act 1)
+        text = state["script_text"][:60000] if len(state["script_text"]) > 60000 else state["script_text"]
         res = await run_character_agent(text, state["page_count"])
         result_dict = res.model_dump()
         await push_event(job_id, {
@@ -105,8 +128,8 @@ async def continuity_node(state: PipelineState) -> Dict[str, Any]:
     await push_event(job_id, {"event": "agent_start", "agent": "continuity", "message": "Continuity Agent checking for contradictions..."})
     
     try:
-        # Cap at 100,000 chars — continuity needs more context to catch contradictions
-        text = state["script_text"][:100000] if len(state["script_text"]) > 100000 else state["script_text"]
+        # First 60k chars — enough to catch most continuity errors while saving RAM
+        text = state["script_text"][:60000] if len(state["script_text"]) > 60000 else state["script_text"]
         res = await run_continuity_agent(text, state["page_count"])
         result_dict = res.model_dump()
         await push_event(job_id, {
