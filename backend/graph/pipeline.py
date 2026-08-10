@@ -33,7 +33,9 @@ async def structure_node(state: PipelineState) -> Dict[str, Any]:
     await push_event(job_id, {"event": "agent_start", "agent": "structure", "message": "Structure Agent analyzing screenplay beats..."})
     
     try:
-        res = await run_structure_agent(state["script_text"], state["page_count"])
+        # Cap at 80,000 chars (~40 pages) to prevent OOM on free-tier hosting
+        text = state["script_text"][:80000] if len(state["script_text"]) > 80000 else state["script_text"]
+        res = await run_structure_agent(text, state["page_count"])
         result_dict = res.model_dump()
         await push_event(job_id, {
             "event": "agent_complete", 
@@ -55,7 +57,9 @@ async def character_node(state: PipelineState) -> Dict[str, Any]:
     await push_event(job_id, {"event": "agent_start", "agent": "character", "message": "Character Agent tracking motivations and arcs..."})
     
     try:
-        res = await run_character_agent(state["script_text"], state["page_count"])
+        # Cap at 80,000 chars to prevent OOM on free-tier hosting
+        text = state["script_text"][:80000] if len(state["script_text"]) > 80000 else state["script_text"]
+        res = await run_character_agent(text, state["page_count"])
         result_dict = res.model_dump()
         await push_event(job_id, {
             "event": "agent_complete", 
@@ -101,7 +105,9 @@ async def continuity_node(state: PipelineState) -> Dict[str, Any]:
     await push_event(job_id, {"event": "agent_start", "agent": "continuity", "message": "Continuity Agent checking for contradictions..."})
     
     try:
-        res = await run_continuity_agent(state["script_text"], state["page_count"])
+        # Cap at 100,000 chars — continuity needs more context to catch contradictions
+        text = state["script_text"][:100000] if len(state["script_text"]) > 100000 else state["script_text"]
+        res = await run_continuity_agent(text, state["page_count"])
         result_dict = res.model_dump()
         await push_event(job_id, {
             "event": "agent_complete", 

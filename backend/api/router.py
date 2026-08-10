@@ -44,7 +44,7 @@ async def create_coverage(file: UploadFile = File(...)):
     # Read and extract text
     try:
         raw_bytes = await file.read()
-        script_text = await asyncio.to_thread(extract_text, raw_bytes, filename)
+        script_text = extract_text(raw_bytes, filename)
     except Exception as exc:
         logger.exception("Failed to extract text from %s", filename)
         raise HTTPException(status_code=422, detail=f"Could not parse file: {exc}")
