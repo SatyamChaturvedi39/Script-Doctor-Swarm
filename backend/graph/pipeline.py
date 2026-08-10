@@ -28,22 +28,26 @@ import asyncio
 def _sample_script_for_structure(text: str, total_chars: int = 120000) -> str:
     """Sample chunks distributed across the full script so beat detection
     covers the entire page range, not just the opening act.
-    
-    Strategy: 7 equally-spaced windows of ~17k chars each, covering
-    0%, 14%, 28%, 42%, 57%, 71%, 85% positions in the script.
+
+    Strategy: 6 equally-spaced windows covering 0%–85%, plus a guaranteed
+    final window of the last 15k chars so 'Final Image' is never missed.
     Total budget: ~120k chars, safe for 512MB free-tier RAM.
     """
     n = len(text)
     if n <= total_chars:
         return text
-    
-    num_chunks = 7
-    chunk_size = total_chars // num_chunks
+
+    tail_size = 15000
+    body_budget = total_chars - tail_size
+    num_chunks = 6
+    chunk_size = body_budget // num_chunks
     chunks = []
     for i in range(num_chunks):
         start = int((i / num_chunks) * n)
         end = min(start + chunk_size, n)
         chunks.append(text[start:end])
+    # Always include the literal end of the script for Final Image detection
+    chunks.append(text[max(0, n - tail_size):])
     return "\n\n[...SCRIPT CONTINUES...]\n\n".join(chunks)
 
 # ── Node Functions ─────────────────────────────────────────────────────────
