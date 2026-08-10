@@ -51,26 +51,36 @@ def _extract_txt(raw_bytes: bytes) -> str:
 
 
 def _extract_pdf(raw_bytes: bytes) -> str:
-    """Extract from PDF using pdfplumber with layout preservation."""
-    try:
-        import pdfplumber
-    except ImportError:
-        raise RuntimeError(
-            "pdfplumber is required for PDF support. "
-            "Install it with: pip install pdfplumber"
-        )
-
+    """Extract from PDF using pypdf or pdfplumber with fast text extraction."""
     pages_text: list[str] = []
     buf = io.BytesIO(raw_bytes)
 
-    with pdfplumber.open(buf) as pdf:
-        for i, page in enumerate(pdf.pages, start=1):
-            text = page.extract_text(layout=True) or ""
+    # Try pypdf first if installed (much faster)
+    try:
+        import pypdf
+        reader = pypdf.PdfReader(buf)
+        for i, page in enumerate(reader.pages, start=1):
+            text = page.extract_text() or ""
             pages_text.append(f"\n--- PAGE {i} ---\n{text}")
+        result = "\n".join(pages_text)
+        logger.info("Extracted %d pages from PDF using pypdf", len(pages_text))
+        return result
+    except ImportError:
+        pass
 
-    result = "\n".join(pages_text)
-    logger.info("Extracted %d pages from PDF", len(pages_text))
-    return result
+    # Fallback to pdfplumber without layout=True (layout=True is 100x slower on 5MB+ PDFs and causes timeouts)
+    try:
+        import pdfplumber
+        buf.seek(0)
+        with pdfplumber.open(buf) as pdf:
+            for i, page in enumerate(pdf.pages, start=1):
+                text = page.extract_text() or ""
+                pages_text.append(f"\n--- PAGE {i} ---\n{text}")
+        result = "\n".join(pages_text)
+        logger.info("Extracted %d pages from PDF using pdfplumber", len(pages_text))
+        return result
+    except ImportError:
+        raise RuntimeError("pdfplumber is required for PDF support.")
 
 
 def estimate_page_count(script_text: str) -> int:
