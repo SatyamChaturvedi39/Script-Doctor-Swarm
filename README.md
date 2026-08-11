@@ -371,16 +371,9 @@ See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for full step-by-step instruction
 
 ---
 
-## License
-
-MIT. See [LICENSE](LICENSE) for details.
-
----
 
 <div align="center">
 
 *Built as a portfolio project demonstrating multi-agent LLM orchestration, RAG architecture, async Python backend engineering, and professional frontend UI design.*
-
-**[⭐ Star on GitHub](https://github.com/SatyamChaturvedi39/Script-Doctor-Swarm)**
 
 </div>
