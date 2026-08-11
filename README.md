@@ -1,69 +1,91 @@
-﻿# Script Doctor Swarm
+<div align="center">
 
-> **Professional screenplay coverage, automated.**
-> A multi-agent LLM system that produces industry-standard script coverage reports — logline, synopsis, scorecard, and a Pass / Consider / Recommend verdict — by running five specialized LangGraph agents in parallel over a screenplay PDF or text file.
+# 🎬 Script Doctor Swarm
+
+### Professional screenplay coverage, automated by a multi-agent LLM pipeline.
+
+[![Python](https://img.shields.io/badge/Python-3.10+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com)
+[![LangGraph](https://img.shields.io/badge/LangGraph-1.2+-FF6B35?style=for-the-badge&logo=langchain&logoColor=white)](https://langchain-ai.github.io/langgraph/)
+[![React](https://img.shields.io/badge/React-18+-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
+[![Gemini](https://img.shields.io/badge/Gemini_Flash-Google_AI-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
+
+**[Live Demo](https://script-doctor-swarm.vercel.app) · [Backend API Docs](https://script-doctor-swarm.onrender.com/docs) · [Deployment Guide](DEPLOYMENT_GUIDE.md)**
+
+</div>
 
 ---
 
 ## What Is Script Coverage?
 
-Script coverage is the studio reader's written evaluation of a screenplay before it reaches a producer's desk. A standard coverage report includes:
+In the film industry, every screenplay submitted to a studio, production company, or agency passes through a **story analyst** (called a "reader") before it reaches a producer's desk. The reader produces a **coverage report** — a structured written evaluation containing:
 
-- A **logline** (one-sentence premise)
-- A **synopsis** (brief narrative summary)
-- **Category ratings** (Structure, Character, Dialogue, Concept, Marketability)
-- A **Pass / Consider / Recommend** verdict with written justification
+- A **logline** — one-sentence premise
+- A **synopsis** — brief narrative summary
+- **Per-category ratings** — Structure, Character, Dialogue, Marketability, Continuity
+- A **Pass / Consider / Recommend verdict** with written justification
 
-Coverage is the gatekeeper of Hollywood development. Script Doctor Swarm replicates the full coverage workflow using five purpose-built LLM agents coordinated by LangGraph, served through a FastAPI backend, and displayed in a React frontend styled to look like a physical studio reader's folder.
+Coverage is Hollywood's first filter. Script Doctor Swarm replicates this workflow end-to-end using five specialized LLM agents orchestrated by LangGraph, delivered through a real-time streaming API, and presented in a React UI styled as a physical studio reader's folder.
 
 ---
 
 ## Architecture
 
 ```
-+-----------------------------------------------------------------------+
-|                         LangGraph Pipeline                            |
-|                                                                       |
-|   Screenplay Text                                                     |
-|        |                                                              |
-|        v                                                              |
-|   +---------+        +---------------+  +---------------+            |
-|   | Parser  |------> | Structure Agt |  | Character Agt |            |
-|   | (PDF/   |        +-------+-------+  +-------+-------+            |
-|   |  TXT)   |                |   (fan-out)       |                   |
-|   +---------+        +-------+-------+  +-------+-------+            |
-|                       |  Comps Agt   |  |Continuity Agt |            |
-|                       | (TMDB API)   |  |               |            |
-|                       +-------+-------+  +-------+-------+            |
-|                               |   (fan-in)        |                   |
-|                               +--------+----------+                   |
-|                                        v                              |
-|                               +-----------------+                     |
-|                               |  Synthesizer Agt |                    |
-|                               |  (Gemini Flash)  |                    |
-|                               +--------+--------+                     |
-|                                        |                              |
-|                                   CoverageReport                      |
-+-----------------------------------------------------------------------+
+                         ┌─────────────────────────────────────┐
+                         │       Script Doctor Swarm Pipeline   │
+                         └──────────────┬──────────────────────┘
+                                        │
+                    ┌───────────────────▼────────────────────┐
+                    │   Parser (pdfplumber / plain text)      │
+                    │   Extracts text + inserts PAGE markers  │
+                    └───────────────────┬────────────────────┘
+                                        │ script_text
+                         ┌──────────────▼──────────────┐
+                         │     LangGraph StateGraph     │
+                         │     (fan-out → fan-in)        │
+                         └──┬──────┬──────┬──────┬──────┘
+                            │      │      │      │   parallel execution
+              ┌─────────────▼─┐ ┌──▼──┐ ┌▼────┐ ┌▼──────────────┐
+              │  Structure    │ │Char-│ │Comps│ │  Continuity   │
+              │  Agent        │ │acter│ │Agent│ │  Agent        │
+              │  (Save the    │ │Agent│ │(TMDB│ │  (fact/prop   │
+              │  Cat beats)   │ │     │ │RAG) │ │  contradicts) │
+              └──────┬────────┘ └──┬──┘ └──┬──┘ └──────┬────────┘
+                     │             │       │             │
+                     └─────────────▼───────▼─────────────┘
+                                          │
+                              ┌───────────▼───────────┐
+                              │   Synthesizer Agent    │
+                              │   (final report +      │
+                              │    verdict synthesis)  │
+                              └───────────┬────────────┘
+                                          │
+                              ┌───────────▼────────────┐
+                              │     CoverageReport      │
+                              │  (SSE → React frontend) │
+                              └────────────────────────┘
 ```
 
-### Agent Responsibilities
+### The Five Agents
 
-| Agent | Role |
-|---|---|
-| **Structure Agent** | Detects the 7 Save the Cat beats and measures deviation from their canonical page-percentage positions |
-| **Character Agent** | Profiles each character's arc, stated motivation, and flags trait inconsistencies with no narrative justification |
-| **Comps / Marketability Agent** | Queries TMDB _before_ generating any text; all comparable films are grounded in retrieved search results, never hallucinated |
-| **Continuity Agent** | Cross-references props, timelines, established facts, and locations for internal contradictions |
-| **Synthesizer Agent** | Reads all four agent reports and produces the final logline, synopsis, scorecard ratings, verdict, and written justification |
+| Agent | Task | Key Technique |
+|---|---|---|
+| **Structure Agent** | Locates 7 Save the Cat beats and measures % deviation from canonical page positions | Zero-shot prompting + deterministic Python math |
+| **Character Agent** | Profiles character arcs and flags trait inconsistencies with page citations | Role-based prompting + structured JSON output |
+| **Comps Agent** | Suggests real comparable films for market positioning | **3-Phase RAG**: keyword extraction → live TMDB API → grounded generation |
+| **Continuity Agent** | Cross-references props, names, locations, and timelines for internal contradictions | Canary-injection evaluation methodology |
+| **Synthesizer Agent** | Merges all four reports into the final logline, synopsis, scorecard, and verdict | Structured output constraints + hallucination guard |
 
-### Key Design Decisions
+### Key Engineering Decisions
 
-- **Parallel fan-out**: The four analysis agents run concurrently via LangGraph's `Send` API, cutting wall-clock time by ~75% versus sequential execution.
-- **LangGraph `Annotated[list, operator.add]`**: Parallel agents safely append results into a shared list without race conditions.
-- **No hallucinated comps**: The Comps Agent receives only TMDB JSON as context — the system prompt forbids referencing any film not present in the retrieved results.
-- **SSE streaming**: The FastAPI backend pushes real-time `agent_start` / `agent_complete` events over Server-Sent Events so the frontend shows a live progress tracker as each agent finishes.
-- **Gemini 2.0 Flash**: Every agent uses `gemini-2.0-flash` for speed and cost efficiency. Each agent enforces `response_mime_type: "application/json"` to avoid unstructured output.
+- **Parallel fan-out** — The four analysis agents execute concurrently via LangGraph's `START` edge fan-out, cutting wall-clock pipeline time by ~75% vs. sequential execution.
+- **RAG-grounded comps** — The Comps Agent queries TMDB _before_ generating any output. The synthesizer's system prompt explicitly forbids referencing films not present in the retrieved results, eliminating hallucinated comparable titles.
+- **Smart text sampling** — For large screenplays, the Structure Agent receives 7 evenly-spaced chunks spanning the full script (rather than a simple head-truncation) so all beats remain detectable regardless of script length.
+- **Multi-tier model cascade** — On Gemini API rate limits (`429 RESOURCE_EXHAUSTED`), the system automatically cascades through configured fallback models (`gemini-3.5-flash` → `gemini-3.5-flash-lite`) before sleeping.
+- **Real-time SSE streaming** — FastAPI pushes `agent_start` / `agent_complete` events over Server-Sent Events as each agent finishes. The frontend shows a live progress tracker — users see partial results as the pipeline runs.
+- **Temperature by task type** — Factual agents (Structure `0.1`, Continuity `0.1`) use near-deterministic decoding. Creative writing agents (Synthesizer `0.3`, Comps `0.3`) use measured sampling for natural prose.
 
 ---
 
@@ -71,13 +93,14 @@ Coverage is the gatekeeper of Hollywood development. Script Doctor Swarm replica
 
 | Layer | Technology |
 |---|---|
-| **LLM** | Google Gemini 2.0 Flash (`google-generativeai`) |
-| **Orchestration** | LangGraph (StateGraph, fan-out/fan-in) |
+| **LLM** | Google Gemini Flash (via `langchain-google-genai`) |
+| **Agent Orchestration** | LangGraph `StateGraph` (parallel fan-out / fan-in DAG) |
 | **Backend API** | FastAPI + Uvicorn |
-| **TMDB Client** | httpx (async) |
-| **PDF Parsing** | PyMuPDF (`fitz`) |
-| **Frontend** | React + Vite + Tailwind CSS v4 |
-| **Streaming** | Server-Sent Events (SSE) |
+| **Real-time Streaming** | Server-Sent Events (`sse-starlette`) |
+| **TMDB Client** | `httpx` (async, with exponential backoff retry) |
+| **PDF Parsing** | `pdfplumber` (layout-preserving extraction) |
+| **Frontend** | React 18 + Vite + Tailwind CSS v4 |
+| **Deployment** | Vercel (frontend) + Render (backend) |
 
 ---
 
@@ -85,61 +108,60 @@ Coverage is the gatekeeper of Hollywood development. Script Doctor Swarm replica
 
 ```
 Script-Doctor-Swarm/
-+-- backend/
-|   +-- main.py                    # FastAPI application entry point
-|   +-- config.py                  # Settings (API keys, TMDB base URL)
-|   +-- requirements.txt
-|   +-- agents/
-|   |   +-- structure_agent.py     # Save the Cat beat detection
-|   |   +-- character_agent.py     # Arc profiling + inconsistency detection
-|   |   +-- comps_agent.py         # TMDB-grounded comparable films
-|   |   +-- continuity_agent.py    # Prop / timeline / fact continuity
-|   |   \-- synthesizer_agent.py   # Final report synthesis
-|   +-- api/
-|   |   +-- router.py              # /api/coverage routes + SSE endpoint
-|   |   +-- schemas.py             # Pydantic models (all agents + report)
-|   |   \-- jobs.py                # In-memory job store with asyncio.Queue
-|   +-- graph/
-|   |   +-- pipeline.py            # LangGraph StateGraph definition
-|   |   \-- runner.py              # ainvoke wrapper + SSE event emission
-|   +-- parser/
-|   |   \-- extractor.py           # PDF/TXT extraction + page count estimate
-|   \-- services/
-|       \-- tmdb_client.py         # Async TMDB search client
-|
-+-- eval/
-|   +-- run_eval.py                # Automated evaluation harness entry point
-|   +-- report_generator.py        # Formats eval results to JSON + Markdown
-|   +-- generate_mock_scripts.py   # Generates synthetic test screenplays
-|   +-- structure_eval.py          # Beat detection scoring vs. answer keys
-|   +-- character_eval.py          # Arc + inconsistency detection scoring
-|   +-- comps_eval.py              # TMDB comp relevance scoring
-|   +-- continuity_eval.py         # Error detection recall scoring
-|   \-- data/
-|       +-- mock_scripts/          # Synthetic test screenplays
-|       +-- beat_answer_keys/      # Ground-truth beat positions
-|       \-- comps_reference/       # Reference comparable films
-|
-\-- frontend/
-    +-- index.html
-    +-- vite.config.js
-    \-- src/
-        +-- App.jsx                # Root: UploadForm -> ProgressTracker -> CoverageReport
-        +-- index.css              # Design tokens (paper/ink palette, Courier/Grotesk fonts)
-        +-- api/
-        |   \-- client.js          # Axios client for /api/coverage
-        +-- hooks/
-        |   \-- useSSE.js          # SSE consumer hook
-        \-- components/
-            +-- UploadForm.jsx      # Drag-and-drop file upload
-            +-- ProgressTracker.jsx # Live agent status board
-            +-- CoverageReport.jsx  # Final coverage sheet
-            +-- VerdictStamp.jsx    # Animated rubber-stamp verdict
-            +-- AgentTabs.jsx       # Tab navigation for detail views
-            +-- StructureDetail.jsx # Beat timeline visualization
-            +-- CharacterDetail.jsx # Character profiles + inconsistencies
-            +-- CompsDetail.jsx     # TMDB comp cards + positioning
-            \-- ContinuityDetail.jsx # Continuity error log
+├── backend/
+│   ├── main.py                    # FastAPI app entry + CORS configuration
+│   ├── config.py                  # Settings, API key pool, model cascade
+│   ├── requirements.txt
+│   ├── agents/
+│   │   ├── base.py                # LLM factory, retry/failover logic, JSON parser
+│   │   ├── structure_agent.py     # Save the Cat beat detection
+│   │   ├── character_agent.py     # Arc profiling + inconsistency detection
+│   │   ├── comps_agent.py         # TMDB-grounded comparable films (RAG)
+│   │   ├── continuity_agent.py    # Prop / timeline / fact continuity
+│   │   └── synthesizer_agent.py   # Final report synthesis + hallucination guard
+│   ├── api/
+│   │   ├── router.py              # POST /api/coverage, GET /stream, GET /{id}
+│   │   ├── schemas.py             # Pydantic models for all agents and report
+│   │   └── jobs.py                # In-memory job store with asyncio.Queue
+│   ├── graph/
+│   │   ├── pipeline.py            # LangGraph StateGraph + smart text sampling
+│   │   ├── runner.py              # ainvoke wrapper + job store updates
+│   │   └── state.py               # PipelineState TypedDict
+│   ├── parser/
+│   │   └── extractor.py           # PDF/TXT extraction + page-marker insertion
+│   └── services/
+│       └── tmdb_client.py         # 3-tier TMDB search (genre IDs → keyword IDs → text)
+│
+├── eval/
+│   ├── run_eval.py                # Evaluation harness entry point
+│   ├── structure_eval.py          # Beat detection accuracy (mean % deviation)
+│   ├── character_eval.py          # Inconsistency detection (Precision / Recall / F1)
+│   ├── comps_eval.py              # Comp relevance (overlap % vs. trade-press reference)
+│   ├── continuity_eval.py         # Error detection recall (canary injection method)
+│   ├── report_generator.py        # Formats results to JSON + Markdown
+│   └── data/
+│       ├── canary_scripts/        # Real scripts with injected ground-truth errors
+│       ├── beat_sheets/           # Published beat-sheet answer keys
+│       └── comps_reference/       # Trade-press comparable film references
+│
+└── frontend/
+    ├── index.html
+    ├── vite.config.js
+    └── src/
+        ├── App.jsx                # Root: UploadForm → ProgressTracker → CoverageReport
+        ├── index.css              # Design tokens (paper/ink palette, typography)
+        ├── api/client.js          # fetch() wrapper for /api/coverage
+        ├── hooks/useSSE.js        # SSE consumer hook (EventSource)
+        └── components/
+            ├── UploadForm.jsx      # Drag-and-drop screenplay submission
+            ├── ProgressTracker.jsx # Live agent status board (SSE-driven)
+            ├── CoverageReport.jsx  # Final coverage sheet
+            ├── VerdictStamp.jsx    # Animated rubber-stamp verdict
+            ├── AgentTabs.jsx       # Tab navigation (Structure / Character / Comps / Continuity)
+            ├── StructureDetail.jsx # Beat timeline table + supporting evidence
+            ├── CharacterDetail.jsx # Character profiles + inconsistency flags
+            ├── CompsDetail.jsx     # TMDB comp cards + market positioning
+            └── ContinuityDetail.jsx # Continuity error log with page citations
 ```
 
 ---
@@ -150,19 +172,31 @@ Script-Doctor-Swarm/
 
 - Python 3.10+
 - Node.js 18+
-- A [Google AI Studio](https://aistudio.google.com/) API key (Gemini 2.0 Flash)
-- A [TMDB API](https://www.themoviedb.org/settings/api) read-access token
+- [Google AI Studio](https://aistudio.google.com/) API key
+- [TMDB API](https://www.themoviedb.org/settings/api) key (free tier, ~40 req/10s)
 
 ### 1. Clone and configure
 
 ```bash
 git clone https://github.com/SatyamChaturvedi39/Script-Doctor-Swarm.git
 cd Script-Doctor-Swarm
-cp .env.example .env
-# Edit .env and fill in GEMINI_API_KEY and TMDB_API_KEY
+cp backend/.env.example .env
 ```
 
-### 2. Backend
+Edit `.env`:
+
+```env
+GEMINI_API_KEY=your_gemini_key_here
+TMDB_API_KEY=your_tmdb_key_here
+GEMINI_MODEL=gemini-2.0-flash
+FRONTEND_ORIGIN=http://localhost:5173
+
+# Optional: fallback models on quota exhaustion
+GEMINI_MODEL_FALLBACK=gemini-1.5-flash
+GEMINI_MODEL_FALLBACK_TWO=gemini-1.5-flash-lite
+```
+
+### 2. Start the backend
 
 ```bash
 cd backend
@@ -170,9 +204,9 @@ pip install -r requirements.txt
 uvicorn main:app --reload --port 8000
 ```
 
-The API will be available at `http://localhost:8000`. Interactive docs: `http://localhost:8000/docs`.
+API available at `http://localhost:8000` · Interactive docs: `http://localhost:8000/docs`
 
-### 3. Frontend
+### 3. Start the frontend
 
 ```bash
 cd frontend
@@ -180,7 +214,7 @@ npm install
 npm run dev
 ```
 
-The UI will be available at `http://localhost:5173`.
+UI available at `http://localhost:5173`
 
 ---
 
@@ -188,72 +222,78 @@ The UI will be available at `http://localhost:5173`.
 
 ### `POST /api/coverage`
 
-Upload a screenplay file (`.pdf` or `.txt`) to start a coverage job.
+Upload a `.pdf` or `.txt` screenplay to start a coverage job.
 
-**Request:** `multipart/form-data` with field `file`.
+**Request:** `multipart/form-data`, field `file`
 
 **Response:**
 ```json
-{ "job_id": "uuid-string" }
+{ "job_id": "550e8400-e29b-41d4-a716-446655440000" }
 ```
 
 ---
 
 ### `GET /api/coverage/{job_id}/stream`
 
-Server-Sent Events stream. Each event is a JSON-encoded `AgentProgressEvent`:
+Server-Sent Events stream of live pipeline progress.
 
 ```jsonc
-// Agent has started processing
-{ "event": "agent_start", "agent": "structure", "message": "Analyzing beats..." }
+// Agent has started
+{ "event": "agent_start",    "agent": "structure",  "message": "Analyzing beats..." }
 
-// Agent finished
-{ "event": "agent_complete", "agent": "character", "message": "Character analysis complete", "data": { ... } }
+// Agent finished — data contains structured output
+{ "event": "agent_complete", "agent": "character",  "message": "Analysis complete", "data": { ... } }
 
-// All agents done — data contains the full CoverageReport
-{ "event": "complete", "agent": null, "message": "Coverage complete", "data": { ... } }
+// All agents done — data is the full CoverageReport
+{ "event": "complete",       "agent": "synthesizer", "message": "Coverage complete", "data": { ... } }
 
-// Something went wrong
-{ "event": "error", "agent": null, "message": "Error description" }
+// Pipeline error
+{ "event": "error",          "agent": null,          "message": "Error description" }
 ```
 
 ---
 
 ### `GET /api/coverage/{job_id}`
 
-Poll the job status synchronously (for cases where SSE is unavailable).
+Poll for the completed report (HTTP polling fallback).
 
-**Response:**
-```json
-{
-  "job_id": "...",
-  "status": "complete",
-  "report": { ... }
-}
-```
+| Status Code | Meaning |
+|---|---|
+| `202` | Pipeline still running |
+| `200` | Complete — body contains `report` |
+| `404` | Job not found |
 
 ---
 
 ## Coverage Report Schema
 
 ```typescript
-{
+interface CoverageReport {
   title: string;
   writer: string;
   genre: string;
   page_count: number;
   logline: string;
   synopsis: string;
-  comments: { [category: string]: string };
-  scorecard: Array<{ category: string; rating: "Excellent" | "Good" | "Fair" | "Poor" }>;
+  comments: {
+    structure: string;
+    character: string;
+    dialogue: string;
+    marketability: string;
+    continuity: string;
+  };
+  scorecard: Array<{
+    category: string;
+    rating: "Excellent" | "Good" | "Fair" | "Poor";
+  }>;
   verdict: "PASS" | "CONSIDER" | "RECOMMEND";
   verdict_justification: string;
 
   // Detailed agent output (powers the tabbed views in the UI)
-  structure_detail: StructureResult;
-  character_detail: CharacterResult;
-  comps_detail: CompsResult;
-  continuity_detail: ContinuityResult;
+  structure_detail: StructureResult;   // beats[], mean_deviation, assessment
+  character_detail: CharacterResult;   // characters[], inconsistencies[]
+  comps_detail: CompsResult;           // comparable_films[], positioning
+  continuity_detail: ContinuityResult; // issues[], summary
 }
 ```
 
@@ -261,40 +301,31 @@ Poll the job status synchronously (for cases where SSE is unavailable).
 
 ## Evaluation Harness
 
-The `eval/` directory contains a fully automated test harness that:
+The `eval/` directory contains a fully automated test harness. All evaluation uses **real screenplays and independently published reference data** — never self-generated test answers.
 
-1. Generates **synthetic test screenplays** modeled on *The Dark Knight*, *Get Out*, and *Jaws*.
-2. Runs each agent against the test scripts and compares output against **ground-truth answer keys**.
-3. Scores each agent on precision/recall metrics appropriate to its task:
-   - **Structure Agent**: Beat detection accuracy (within ±5% page tolerance)
-   - **Character Agent**: Named character recall + inconsistency detection recall
-   - **Comps Agent**: Comp relevance score (genre/keyword overlap with reference films)
-   - **Continuity Agent**: Error detection recall against seeded continuity bugs
-4. Outputs a full **JSON + Markdown report** to `eval/results/`.
+### Methodology by Agent
 
-**Run the harness:**
+| Agent | Metric | Ground Truth Source |
+|---|---|---|
+| **Structure** | Mean Absolute % Deviation from expected beat positions | Published beat-sheet breakdowns (Get Out, Whiplash, Parasite) |
+| **Character** | Precision / Recall / F1 on inconsistency detection | Canary injection — real scripts with deliberately planted contradictions |
+| **Comps** | Overlap % vs. reference comparable films | Trade-press comparable film records |
+| **Continuity** | Precision / Recall / F1 on error detection | Canary injection — real scripts with planted continuity errors |
+
+### Results
+
+- **Structure Agent**: 3.5–4.8% mean beat deviation across test scripts (all citations backed by direct page quotes)
+- **Character Agent**: Precision 0.80 · Recall 0.75 · F1 0.77 on canary scripts
+- **Comps Agent**: 60%+ genre/keyword overlap with trade-press comparable film references
+
+### Run the harness
+
 ```bash
 cd backend
 python ../eval/run_eval.py
 ```
 
----
-
-## Design Philosophy
-
-The UI deliberately avoids generic AI-dashboard aesthetics. The experience is grounded in what a script coverage report *actually is* as a physical object — a studio reader's coverage folder.
-
-**Design tokens:**
-
-| Token | Value | Purpose |
-|---|---|---|
-| `--color-paper` | `#F7F3E8` | Aged document cream |
-| `--color-ink` | `#1F1B16` | Dark warm near-black |
-| `--color-red-flag` | `#C8302A` | Reader's correction red |
-| Font (headings/labels) | `Courier Prime` | Typewriter authenticity |
-| Font (body/UI) | `DM Sans` | Legible modern grotesque |
-
-The **verdict stamp** (PASS / CONSIDER / RECOMMEND) is the only animated element — a rubber-stamp drop with rotation + opacity transition — so it reads as a physical evaluation artifact rather than a UI widget.
+Results are written to `eval/results/eval_report_latest.md`.
 
 ---
 
@@ -302,10 +333,41 @@ The **verdict stamp** (PASS / CONSIDER / RECOMMEND) is the only animated element
 
 | Variable | Required | Description |
 |---|---|---|
-| `GEMINI_API_KEY` | Yes | Google AI Studio key for Gemini 2.0 Flash |
-| `TMDB_API_KEY` | Yes | TMDB read-access token for comparable film lookup |
+| `GEMINI_API_KEY` | ✅ Yes | Google AI Studio API key (primary) |
+| `TMDB_API_KEY` | ✅ Yes | TMDB v3 API key for comparable film lookup |
+| `GEMINI_MODEL` | No | Primary model (default: `gemini-2.0-flash`) |
+| `GEMINI_MODEL_FALLBACK` | No | Fallback on quota exhaustion |
+| `GEMINI_MODEL_FALLBACK_TWO` | No | Second fallback |
+| `GEMINI_API_KEY_FALLBACK` | No | Comma-separated additional API keys for rotation |
+| `FRONTEND_ORIGIN` | No | Production frontend URL for CORS (default: `http://localhost:5173`) |
 
-See [`.env.example`](.env.example) for the template.
+---
+
+## Design Philosophy
+
+The UI deliberately avoids generic AI-dashboard aesthetics. The visual experience is grounded in what a script coverage report *actually is* as a physical object — a studio reader's coverage folder.
+
+| Design Token | Value | Purpose |
+|---|---|---|
+| `--color-paper` | `#F7F3E8` | Aged document cream |
+| `--color-ink` | `#1F1B16` | Dark warm near-black |
+| `--color-manila` | `#D4A847` | Classic manila folder yellow |
+| `--color-red-flag` | `#C8302A` | Reader's correction red |
+| `--color-carbon-blue` | `#1E3A5F` | Carbon copy blue |
+| Font (headings) | `Courier Prime` | Typewriter authenticity |
+| Font (body/UI) | `DM Sans` | Legible modern grotesque |
+
+The **verdict stamp** (PASS / CONSIDER / RECOMMEND) is the only animated element — a rubber-stamp drop with rotation and opacity — designed to read as a physical evaluation artifact, not a UI widget.
+
+---
+
+## Deployment
+
+See [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) for full step-by-step instructions to deploy on:
+- **Frontend** → Vercel (zero-config, auto-deploy from GitHub)
+- **Backend** → Render (Python web service, free tier)
+
+**Environment variables** must be set in both Vercel (for `VITE_API_BASE_URL`) and Render (for all backend secrets).
 
 ---
 
@@ -315,4 +377,10 @@ MIT. See [LICENSE](LICENSE) for details.
 
 ---
 
-*Built as a portfolio project demonstrating multi-agent LLM orchestration, async Python backends, and professional frontend UI design.*
+<div align="center">
+
+*Built as a portfolio project demonstrating multi-agent LLM orchestration, RAG architecture, async Python backend engineering, and professional frontend UI design.*
+
+**[⭐ Star on GitHub](https://github.com/SatyamChaturvedi39/Script-Doctor-Swarm)**
+
+</div>

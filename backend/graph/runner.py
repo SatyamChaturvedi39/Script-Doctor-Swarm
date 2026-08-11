@@ -1,7 +1,7 @@
 """
 Runner module to invoke the LangGraph pipeline asynchronously.
 
-Takes job parameters, invokes thecompiled StateGraph, updates the Job store
+Takes job parameters, invokes the compiled StateGraph, updates the Job store
 on completion or failure, and handles formatting.
 """
 
