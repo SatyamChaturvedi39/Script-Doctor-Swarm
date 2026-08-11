@@ -11,7 +11,7 @@
 [![Gemini](https://img.shields.io/badge/Gemini_Flash-Google_AI-4285F4?style=for-the-badge&logo=google&logoColor=white)](https://ai.google.dev)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-**[Live Demo](https://script-doctor-swarm.vercel.app) · [Backend API Docs](https://script-doctor-swarm.onrender.com/docs) · [Deployment Guide](DEPLOYMENT_GUIDE.md)**
+**[Live Demo](https://script-doctor-swarm.vercel.app)**
 
 </div>
 
